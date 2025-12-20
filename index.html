@@ -1017,6 +1017,9 @@
       background: var(--tgp-light-gold);
     }
   </style>
+  <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <div class="app-wrapper">
@@ -1308,47 +1311,116 @@
   </div>
 
   <script>
+    const firebaseConfig = {
+  apiKey: "AIzaSyBAWYNEAuEdXdNdkgcSQfJHwTZVoW5v0vs",
+  authDomain: "tgp-noveleta-d59a2.firebaseapp.com",
+  databaseURL: "https://tgp-noveleta-d59a2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "tgp-noveleta-d59a2",
+  storageBucket: "tgp-noveleta-d59a2.firebasestorage.app",
+  messagingSenderId: "101367799268",
+  appId: "1:101367799268:web:5213a283b8a65e71997bf1"
+};
+
+let app, database;
+try {
+  app = firebase.initializeApp(firebaseConfig);
+  database = firebase.database();
+  console.log("✅ Firebase initialized successfully!");
+} catch (error) {
+  console.error("❌ Firebase initialization error:", error);
+}
     // ==================== DATA PERSISTENCE ====================
     class DataStore {
-      static KEYS = {
-        USERS: 'tgp_users',
-        MEMBERS: 'tgp_members',
-        CURRENT_USER: 'tgp_current_user'
-      };
+  static KEYS = {
+    USERS: 'tgp_users',
+    MEMBERS: 'tgp_members',
+    CURRENT_USER: 'tgp_current_user'
+  };
 
-      static saveUsers(users) {
-        localStorage.setItem(this.KEYS.USERS, JSON.stringify(users));
-      }
+  static saveUsers(users) {
+    return database.ref(this.KEYS.USERS).set(users)
+      .then(() => {
+        console.log("✅ Users saved to Firebase");
+        return true;
+      })
+      .catch(error => {
+        console.error("❌ Error saving users:", error);
+        return false;
+      });
+  }
 
-      static getUsers() {
-        const data = localStorage.getItem(this.KEYS.USERS);
-        return data ? JSON.parse(data) : [];
-      }
+  static async getUsers() {
+    try {
+      const snapshot = await database.ref(this.KEYS.USERS).once('value');
+      const data = snapshot.val();
+      return data ? data : [];
+    } catch (error) {
+      console.error("❌ Error getting users:", error);
+      return [];
+    }
+  }
 
-      static saveMembers(members) {
-        localStorage.setItem(this.KEYS.MEMBERS, JSON.stringify(members));
-      }
+  static saveMembers(members) {
+    return database.ref(this.KEYS.MEMBERS).set(members)
+      .then(() => {
+        console.log("✅ Members saved to Firebase");
+        return true;
+      })
+      .catch(error => {
+        console.error("❌ Error saving members:", error);
+        return false;
+      });
+  }
 
-      static getMembers() {
-        const data = localStorage.getItem(this.KEYS.MEMBERS);
-        return data ? JSON.parse(data) : [];
-      }
+  static async getMembers() {
+    try {
+      const snapshot = await database.ref(this.KEYS.MEMBERS).once('value');
+      const data = snapshot.val();
+      return data ? data : [];
+    } catch (error) {
+      console.error("❌ Error getting members:", error);
+      return [];
+    }
+  }
 
-      static saveCurrentUser(user) {
-        localStorage.setItem(this.KEYS.CURRENT_USER, JSON.stringify(user));
-      }
+  static saveCurrentUser(user) {
+    return database.ref(this.KEYS.CURRENT_USER).set(user)
+      .then(() => {
+        console.log("✅ Current user saved to Firebase");
+        return true;
+      })
+      .catch(error => {
+        console.error("❌ Error saving current user:", error);
+        return false;
+      });
+  }
 
-      static getCurrentUser() {
-        const data = localStorage.getItem(this.KEYS.CURRENT_USER);
-        return data ? JSON.parse(data) : null;
-      }
+  static async getCurrentUser() {
+    try {
+      const snapshot = await database.ref(this.KEYS.CURRENT_USER).once('value');
+      const data = snapshot.val();
+      return data ? data : null;
+    } catch (error) {
+      console.error("❌ Error getting current user:", error);
+      return null;
+    }
+  }
 
-      static clearCurrentUser() {
-        localStorage.removeItem(this.KEYS.CURRENT_USER);
-      }
+  static clearCurrentUser() {
+    return database.ref(this.KEYS.CURRENT_USER).remove()
+      .then(() => {
+        console.log("✅ Current user cleared");
+        return true;
+      })
+      .catch(error => {
+        console.error("❌ Error clearing user:", error);
+        return false;
+      });
+  }
+    }
 
-      static initializeDefaultAdmin() {
-        const users = this.getUsers();
+      static async initializeDefaultAdmin() {
+        const users = await this.getUsers();
         if (users.length === 0) {
           const defaultAdmin = {
             id: Date.now(),
@@ -1378,11 +1450,13 @@
       }
     }
 
-    DataStore.initializeDefaultAdmin();
+    (async () => {
+  await DataStore.initializeDefaultAdmin();
+})();
 
     // ==================== EXCEL EXPORT ====================
-    function exportToExcel() {
-      const members = DataStore.getMembers();
+    async function exportToExcel() {
+      const members = await DataStore.getMembers();
       
       if (members.length === 0) {
         showToast('No members to export!', 'error');
